@@ -9,6 +9,7 @@
   "author": "valentincognito",
   "license": "ISC",
   "dependencies": {
+    "johnny-five": "^0.15.0",
     "serialport": "^6.2.2"
   }
 }

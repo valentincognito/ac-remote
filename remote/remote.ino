@@ -1,11 +1,7 @@
 #include <IRremote.h>
 #include <Wire.h>
 
-
 IRsend irsend;
-// not used
-int RECV_PIN = 11;
-IRrecv irrecv (RECV_PIN);
 
 const int AC_TYPE  = 0;
 // 0 : TOWER
@@ -31,8 +27,6 @@ int AC_FLOW        = 1;
 // 1 : mid
 // 2 : high
 // if AC_TYPE =1, 3 : change
-//
-
 
 const int AC_FLOW_TOWER[3] = {0, 4, 6};
 const int AC_FLOW_WALL[4]  = {0, 2, 4, 5};
@@ -42,7 +36,7 @@ unsigned long AC_CODE_TO_SEND;
 int r = LOW;
 int o_r = LOW;
 
-byte a, b;
+byte a, b = 0;
 
 void ac_send_code(unsigned long code)
 {
@@ -56,7 +50,6 @@ void ac_send_code(unsigned long code)
 
 void ac_activate(int temperature, int air_flow)
 {
-
   int AC_MSBITS1 = 8;
   int AC_MSBITS2 = 8;
   int AC_MSBITS3 = 0;
@@ -135,43 +128,25 @@ void ac_air_clean(int air_clean)
   AC_AIR_ACLEAN = air_clean;
 }
 
+const byte numChars = 32;
+char receivedChars[numChars]; // an array to store the received data
+
+boolean newData = false;
+
 void setup()
 {
   Serial.begin(38400);
   delay(1000);
-  Wire.begin(7);
-  Wire.onReceive(receiveEvent);
 
-  //ac_activate(27, 2);
-  analogWrite(RECV_PIN, 0);
+  ac_activate(27, 2);
 }
 
-int incomingByte = 0;   // for incoming serial data
 void loop()
 {
-  if (Serial.available() > 0) {
-    // read the incoming byte:
-    incomingByte = Serial.read();
-
-    Serial.print(incomingByte);
-    //ac_activate(27, 2);
-
-    if(incomingByte == 0){
-      ac_power_down();
-    }
-//    switch(incomingByte){
-//      case 0:
-//        ac_power_down();
-//        break;
-//     case 1:
-//        ac_activate(27, 1);
-//      break;
-//     case 2:
-//        ac_activate(27, 2);
-//      break;
-//    }
-  }
-
+  recvWithEndMarker();
+  parsInput();
+  showNewData();
+        
   if ( r != o_r) {
     /*
     # a : mode or temp    b : air_flow, temp, swing, clean, cooling/heating
@@ -186,86 +161,138 @@ void loop()
     # - : temp - 1
     # m : change cooling to air clean, air clean to cooling
     */
-//    Serial.print("a : ");
-//    Serial.print(a);
-//    Serial.print("  b : ");
-//    Serial.println(b);
-
-    switch (a) {
-      case 0: // off
-        ac_power_down();
-        break;
-      case 1: // on
-        ac_activate(AC_TEMPERATURE, AC_FLOW);
-        break;
-      case 2:
-        if ( b == 0 | b == 1 ) {
-          ac_change_air_swing(b);
-        }
-        break;
-      case 3: // 1  : clean on, power on
-        if ( b == 0 | b == 1 ) {
-          ac_air_clean(b);
-        }
-        break;
-      case 4:
-        if ( 0 <= b && b <= 2  ) {
-          ac_activate(AC_TEMPERATURE, b);
-        }
-        break;
-      case 5:
-        if (18 <= b && b <= 30  ) {
-          ac_activate(b, AC_FLOW);
-        }
-        break;
-      case '+':
-        if ( 18 <= AC_TEMPERATURE && AC_TEMPERATURE <= 29 ) {
-          ac_activate((AC_TEMPERATURE + 1), AC_FLOW);
-        }
-        break;
-      case '-':
-        if ( 19 <= AC_TEMPERATURE && AC_TEMPERATURE <= 30 ) {
-          ac_activate((AC_TEMPERATURE - 1), AC_FLOW);
-        }
-        break;
-      case 'm':
-        /*
-          if ac is on,  1) turn off, 2) turn on ac_air_clean(1)
-          if ac is off, 1) turn on,  2) turn off ac_air_clean(0)
-        */
-        if ( AC_POWER_ON == 1 ) {
-          ac_power_down();
-          delay(100);
-          ac_air_clean(1);
-        } else {
-          if ( AC_AIR_ACLEAN == 1) {
-            ac_air_clean(0);
-            delay(100);
-          }
-          ac_activate(AC_TEMPERATURE, AC_FLOW);
-        }
-        break;
-      default:
-        if ( 18 <= a && a <= 30 ) {
-          if ( 0 <= b && b <= 2 ) {
-            ac_activate(a, b);
-          }
-        }
-    }
+//    if(incomingByte == 0){
+//       Serial.write(incomingByte);
+//       //ac_activate(27, 2);
+//    }else if(incomingByte == 1){
+//      ac_power_down();
+//    }
+    
+//    switch (incomingByte) {
+//      case 0: // off
+//        ac_power_down();
+//        break;
+//      case 1: // on
+//        ac_activate(AC_TEMPERATURE, AC_FLOW);
+//        break;
+//      case 2:
+//        if ( b == 0 | b == 1 ) {
+//          ac_change_air_swing(b);
+//        }
+//        break;
+//      case 3: // 1  : clean on, power on
+//        if ( b == 0 | b == 1 ) {
+//          ac_air_clean(b);
+//        }
+//        break;
+//      case 4:
+//        if ( 0 <= b && b <= 2  ) {
+//          ac_activate(AC_TEMPERATURE, b);
+//        }
+//        break;
+//      case 5:
+//        if (18 <= b && b <= 30  ) {
+//          ac_activate(b, AC_FLOW);
+//        }
+//        break;
+//      case '+':
+//        if ( 18 <= AC_TEMPERATURE && AC_TEMPERATURE <= 29 ) {
+//          ac_activate((AC_TEMPERATURE + 1), AC_FLOW);
+//        }
+//        break;
+//      case '-':
+//        if ( 19 <= AC_TEMPERATURE && AC_TEMPERATURE <= 30 ) {
+//          ac_activate((AC_TEMPERATURE - 1), AC_FLOW);
+//        }
+//        break;
+//      case 'm':
+//        /*
+//          if ac is on,  1) turn off, 2) turn on ac_air_clean(1)
+//          if ac is off, 1) turn on,  2) turn off ac_air_clean(0)
+//        */
+//        if ( AC_POWER_ON == 1 ) {
+//          ac_power_down();
+//          delay(100);
+//          ac_air_clean(1);
+//        } else {
+//          if ( AC_AIR_ACLEAN == 1) {
+//            ac_air_clean(0);
+//            delay(100);
+//          }
+//          ac_activate(AC_TEMPERATURE, AC_FLOW);
+//        }
+//        break;
+//      default:
+//        if ( 18 <= a && a <= 30 ) {
+//          if ( 0 <= b && b <= 2 ) {
+//            ac_activate(a, b);
+//          }
+//        }
+//    }
 
     o_r = r ;
   }
   delay(100);
 }
 
-
-
-void receiveEvent(int howMany)
-{
-  a = Wire.read();
-  b = Wire.read();
-
-  r = !r ;
+void recvWithEndMarker() {
+  static byte ndx = 0;
+  char endMarker = '\n';  //\n for newline and \r for carriage return
+  char rc;
+  
+  while (Serial.available() > 0 && newData == false) {
+    rc = Serial.read();
+    //Serial.print(rc,HEX);
+    if (rc != endMarker) {
+      receivedChars[ndx] = rc;
+      ndx++;
+      if (ndx >= numChars) {
+        ndx = numChars - 1;
+      }
+      //Serial.println(0);
+    }
+    else {
+      Serial.println(0);
+      receivedChars[ndx] = '\0'; // terminate the string
+      ndx = 0;
+      newData = true;
+    }
+  }
+}
+void parsInput(){
+  if (newData == true) {
+    String myString = receivedChars;
+    int commaIndex = myString.indexOf("=");
+    //  Search for the next comma just after the first
+    int secondCommaIndex = myString.indexOf(';', commaIndex + 1);
+  
+    String firstValue = myString.substring(0, commaIndex);
+    String secondValue = myString.substring(commaIndex + 1, secondCommaIndex);
+    String thirdValue = myString.substring(secondCommaIndex + 1); // To the end of the string
+    
+    Serial.println(firstValue);
+    Serial.println(secondValue);
+    Serial.println(thirdValue);
+    
+    inputCommands(firstValue, secondValue);
+  }
 }
 
+void showNewData() {
+  if (newData == true) {
+    //Serial.print("This just in ... ");
+    //Serial.println(receivedChars);
+    newData = false;
+  }
+}
+
+void inputCommands(String par, String val) {
+    if (par == "led"){
+      Serial.println(val);
+    } else if (par == "ech"){
+      Serial.println(val);
+    } else {
+      Serial.println("<Par not found!>");
+    } 
+}
 
