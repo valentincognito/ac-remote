@@ -2,11 +2,50 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title></title>
+    <title>AC Remote</title>
+
+    <meta name="HandheldFriendly" content="True">
+    <meta name="MobileOptimized" content="320">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="transparent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-status-bar-style" content="transparent">
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="theme-color" content="#f0f3f5">
+
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="/favicons/apple-touch-icon-57x57.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/favicons/apple-touch-icon-114x114.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicons/apple-touch-icon-72x72.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicons/apple-touch-icon-144x144.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="60x60" href="/favicons/apple-touch-icon-60x60.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicons/apple-touch-icon-120x120.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="76x76" href="/favicons/apple-touch-icon-76x76.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicons/apple-touch-icon-152x152.png" />
+    <link rel="icon" type="image/png" href="/favicons/favicon-196x196.png" sizes="196x196" />
+    <link rel="icon" type="image/png" href="/favicons/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32" />
+    <link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16" />
+    <link rel="icon" type="image/png" href="/favicons/favicon-128.png" sizes="128x128" />
+
+    <link rel="stylesheet" href="/css/all.css">
   </head>
   <body>
-    <button class="cmd" data-cmd="1" type="button" name="button">on</button>
-    <button class="cmd" data-cmd="0" type="button" name="button">off</button>
+    <div class="content">
+      <h2>AC Remote</h2>
+      <span class="temperature block">
+        27
+        <!-- <sup>&deg;</sup> -->
+      </span>
+      <input id="input_temp" class="slider-temp" type="range" min="18" max="30" value="27">
+      <!-- <button class="cmd" data-cmd="1" type="button" name="button">on</button> -->
+      <button class="cmd button-power" data-cmd="0" type="button" name="button">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 426.03 459">
+          <path d="M350.31 83.12a21.176 21.176 0 1 0-27.3 32.38 170.47 170.47 0 0 1 60.69 130.53c0 94.13-76.58 170.71-170.71 170.71S42.31 340.12 42.31 245.98a170.46 170.46 0 0 1 60.7-130.48 21.155 21.155 0 1 0-27.28-32.34A212.7 212.7 0 0 0 .01 245.98c0 117.46 95.56 213 213 213s213-95.56 213-213a212.69 212.69 0 0 0-75.7-162.86z"/>
+          <path d="M213.01 211.99a21.15 21.15 0 0 0 21.15-21.15V21.15a21.155 21.155 0 0 0-42.31 0v169.68a21.15 21.15 0 0 0 21.16 21.16z"/>
+        </svg>
+      </button>
+    </div>
   </body>
 </html>
 
@@ -16,11 +55,23 @@
 <script type="text/javascript">
 $(function () {
 	//globas variables
-	var socket = io();
+	var socket = io()
+  var last_temp = 27
+
+  $('.slider-temp').change(function(){
+    var temp = $(this).val()
+    if (temp > last_temp) {
+      socket.emit('new-command', 6)
+    }else{
+      socket.emit('new-command', 7)
+    }
+    $('.temperature').html(temp)
+    last_temp = temp
+  })
 
 	$('.cmd').click(function(){
     var cmd = $(this).attr('data-cmd')
-    socket.emit('new-command', cmd);
+    socket.emit('new-command', cmd)
   })
 })
 </script>
