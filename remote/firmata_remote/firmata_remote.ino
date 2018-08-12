@@ -858,7 +858,7 @@ void loop()
   serialFeature.update();
 #endif
 
-  //Serial.println(digitalRead(12), DEC);
+ //Serial.println("hello");
     // test
 //  if (digitalRead(12) == 0) {
 //    ac_activate(27, 2);
