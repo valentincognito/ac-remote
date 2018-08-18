@@ -2,17 +2,13 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>AC Remote</title>
+    <title>Remote</title>
 
     <meta name="HandheldFriendly" content="True">
     <meta name="MobileOptimized" content="320">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="transparent">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-status-bar-style" content="transparent">
-    <meta name="format-detection" content="telephone=no" />
-    <meta name="theme-color" content="#f0f3f5">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <link rel="apple-touch-icon-precomposed" sizes="57x57" href="/favicons/apple-touch-icon-57x57.png" />
     <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/favicons/apple-touch-icon-114x114.png" />
@@ -32,19 +28,30 @@
   </head>
   <body>
     <div class="content">
-      <h2>AC Remote</h2>
-      <span class="temperature block">
-        27
-        <!-- <sup>&deg;</sup> -->
-      </span>
+      <div class="ac-temp">27</div>
       <input id="input_temp" class="slider-temp" type="range" min="18" max="30" value="27">
+
+      <div style="margin-bottom: 80px;">
+        flow status:
+        <span class="airflow-status">1</span><br><br>
+        <button class="airflow" type="button" name="toggle_airflow">toggle airflow</button>
+      </div>
+
       <!-- <button class="cmd" data-cmd="1" type="button" name="button">on</button> -->
-      <button class="cmd button-power" data-cmd="0" type="button" name="button">
+      <button class="button-power" data-cmd="0" type="button" name="button">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 426.03 459">
           <path d="M350.31 83.12a21.176 21.176 0 1 0-27.3 32.38 170.47 170.47 0 0 1 60.69 130.53c0 94.13-76.58 170.71-170.71 170.71S42.31 340.12 42.31 245.98a170.46 170.46 0 0 1 60.7-130.48 21.155 21.155 0 1 0-27.28-32.34A212.7 212.7 0 0 0 .01 245.98c0 117.46 95.56 213 213 213s213-95.56 213-213a212.69 212.69 0 0 0-75.7-162.86z"/>
           <path d="M213.01 211.99a21.15 21.15 0 0 0 21.15-21.15V21.15a21.155 21.155 0 0 0-42.31 0v169.68a21.15 21.15 0 0 0 21.16 21.16z"/>
         </svg>
       </button>
+    </div><!-- content end-->
+    <div class="overlay-start">
+      <div class="center">
+        <div class="title">Start AC ?</div>
+        <button class="button-start" type="button" name="button">
+          start
+        </button>
+      </div>
     </div>
   </body>
 </html>
@@ -57,21 +64,51 @@ $(function () {
 	//globas variables
 	var socket = io()
   var last_temp = 27
+  var last_airflow = 1
 
   $('.slider-temp').change(function(){
     var temp = $(this).val()
+    var diff = Math.abs(last_temp - temp)
     if (temp > last_temp) {
-      socket.emit('new-command', 6)
+      for (var i = 0; i < diff; i++) {
+        setTimeout(function () {
+          socket.emit('new-command', 6)
+        }, 600 * i);
+      }
     }else{
-      socket.emit('new-command', 7)
+      for (var i = 0; i < diff; i++) {
+        setTimeout(function () {
+          socket.emit('new-command', 7)
+        }, 600 * i);
+      }
     }
     $('.temperature').html(temp)
     last_temp = temp
   })
 
-	$('.cmd').click(function(){
+	$('.button-power').click(function(){
+    console.log('ho');
     var cmd = $(this).attr('data-cmd')
     socket.emit('new-command', cmd)
+    $('.overlay-start').removeClass('hide')
+  })
+
+  $('.airflow').click(function(){
+    if (last_airflow == 1) {
+      socket.emit('new-command', 4)
+      last_airflow = 0
+    }else{
+      socket.emit('new-command', 5)
+      last_airflow = 1
+    }
+
+    $('.airflow-status').html(last_airflow)
+  })
+
+  $('.button-start').click(function(){
+    //init the AC temp to last_temp
+    socket.emit('new-command', 1)
+    $('.overlay-start').addClass('hide')
   })
 })
 </script>
